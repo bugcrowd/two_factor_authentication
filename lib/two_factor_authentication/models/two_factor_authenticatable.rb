@@ -28,7 +28,7 @@ module Devise
           totp = ROTP::TOTP.new(self.otp_column)
           drift = options[:drift] || self.class.allowed_otp_drift_seconds
 
-          totp.verify_with_drift(code, drift)
+          totp.verify(code, drift_behind: drift)
         end
 
         def otp_code(time = Time.now)
