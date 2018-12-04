@@ -32,7 +32,7 @@ module Devise
         end
 
         def otp_code(time = Time.now)
-          ROTP::TOTP.new(self.otp_column).at(time, true)
+          ROTP::TOTP.new(self.otp_column).at(time)
         end
 
         def provisioning_uri(account = nil, options = {})
