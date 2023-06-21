@@ -4,11 +4,35 @@ module Devise
     module TwoFactorAuthenticatable
       extend ActiveSupport::Concern
 
+      # We can't bump ROTP because it breaks this Gem and can't use the version of ROTP that this Gem requires
+      # because it breaks in Ruby 3 as URI.encode does not exist
+      module Ruby3RotpPatch
+        refine ROTP::TOTP do
+          def provisioning_uri(name)
+            # The format of this URI is documented at:
+            # https://github.com/google/google-authenticator/wiki/Key-Uri-Format
+            # For compatibility the issuer appears both before that account name and also in the
+            # query string.
+            issuer_string = issuer.nil? ? "" : "#{CGI::escape(issuer)}:"
+            params = {
+              secret: secret,
+              period: interval == 30 ? nil : interval,
+              issuer: issuer,
+              digits: digits ==  ROTP::TOTP::DEFAULT_DIGITS ? nil : digits,
+              algorithm: digest.upcase == 'SHA1' ? nil : digest.upcase,
+            }
+
+            encode_params("otpauth://totp/#{issuer_string}#{CGI::escape(name)}", params)
+          end
+        end
+      end
       module ClassMethods
+
         def has_one_time_password(options = {})
 
           cattr_accessor :otp_column_name
           self.otp_column_name = "otp_secret_key"
+
 
           include InstanceMethodsOnActivation
 
@@ -24,6 +48,8 @@ module Devise
       end
 
       module InstanceMethodsOnActivation
+        using Ruby3RotpPatch
+
         def authenticate_otp(code, options = {})
           totp = ROTP::TOTP.new(self.otp_column)
           drift = options[:drift] || self.class.allowed_otp_drift_seconds
