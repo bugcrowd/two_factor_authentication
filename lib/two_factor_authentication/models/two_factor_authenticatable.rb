@@ -27,7 +27,7 @@ module Devise
         def authenticate_otp(code, options = {})
           totp = ROTP::TOTP.new(self.otp_column)
           drift = options[:drift] || self.class.allowed_otp_drift_seconds
-          topt.verify(code, drift_ahead: drift, drift_behind: drift)
+          totp.verify(code, drift_ahead: drift, drift_behind: drift)
         end
 
         def otp_code(time = Time.now)
